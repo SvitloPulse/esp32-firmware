@@ -1,0 +1,5 @@
+.pio
+.vscode/
+!.vscode/extensions.json
+src/config.hpp
+__pycache__/
