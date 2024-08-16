@@ -271,7 +271,7 @@ def parse_nvs_binary(input):
     for page in page_array:
         page_idx = page[0]
         seq_no = page[1]
-        # print("Parsing page %d with seq no %d" % (page_idx, seq_no))
+        print("Parsing page %d with seq no %d" % (page_idx, seq_no))
         page_base = page_idx * PAGE_SIZE
         scan_in_page(input[page_base:page_base+PAGE_SIZE], page_idx)
     

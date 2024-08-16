@@ -1,13 +1,13 @@
-#include "md_config.hpp"
+#include "sb_config.hpp"
 #include "esp_log.h"
 #include "nvs_flash.h"
 
-const char* md_config::GROUP = "group";
-static const char *LOG_TAG = "md_config";
-static const char nvs_namespace[] = "md_cfg";
+const char* sb_config::KEY = "key";
+static const char *LOG_TAG = "sb_config";
+static const char nvs_namespace[] = "sb_cfg";
 static nvs_handle_t s_nvs_handle = NULL;
 
-esp_err_t md_config_init(void)
+esp_err_t sb_config_init(void)
 {
     esp_err_t err = nvs_flash_init();
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
@@ -23,17 +23,17 @@ esp_err_t md_config_init(void)
     return err;
 }
 
-esp_err_t md_config_get(const char *key, char *value, size_t *size)
+esp_err_t sb_config_get(const char *key, char *value, size_t *size)
 {
     return nvs_get_str(s_nvs_handle, key, value, size);
 }
 
-esp_err_t md_config_set(const char *key, const void *value)
+esp_err_t sb_config_set(const char *key, const void *value)
 {
     return nvs_set_str(s_nvs_handle, key, (const char *)value);
 }
 
-esp_err_t md_config_commit(void)
+esp_err_t sb_config_commit(void)
 {
     return nvs_commit(s_nvs_handle);
 }

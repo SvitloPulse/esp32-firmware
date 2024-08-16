@@ -3,3 +3,4 @@
 !.vscode/extensions.json
 src/config.hpp
 __pycache__/
+.env
