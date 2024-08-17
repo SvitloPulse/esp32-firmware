@@ -3,6 +3,8 @@ Import("env", "projenv")
 SMARTCONFIG_KEY_LEN=16
 
 # Install missed package
+env.Execute("$PYTHONEXE -m pip install python-dotenv")
+
 try:
     import os
     import json
