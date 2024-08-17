@@ -1,4 +1,6 @@
 build: off
+cache:
+  - '%USERPROFILE%\.platformio -> appveyor.yml'
 init:
   - git config --global core.autocrlf input
 
@@ -18,7 +20,7 @@ deploy:
 - provider: GitHub
   description: Draft release
   auth_token:
-    secure: F9LLS3TkKo/pFmBa0e7yTe4j75rcAcQqNHW7eQZQWSiREi9fl41XxSSrnjLoVR5UDhuiqVDV5U6fQ+36S9EC/uRZj7UHtFso6HGo5nqmdXZBhFUjMg0IQ4skcrRqGUgq
+    secure: iJAvKTreoG/55DiyN7ViE+Q3Vu9BvurMk2VXzlN2bOX2i+G31ijdS5eD1u/iKJZ2
   draft: true
   on:
     branch: master
