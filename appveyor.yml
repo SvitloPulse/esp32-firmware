@@ -17,11 +17,22 @@ artifacts:
   - path: .pio/build/*/*-manifest.json
 
 deploy:
-- provider: GitHub
-  description: Draft release
-  auth_token:
-    secure: iJAvKTreoG/55DiyN7ViE+Q3Vu9BvurMk2VXzlN2bOX2i+G31ijdS5eD1u/iKJZ2
-  draft: true
-  on:
-    branch: master
-    #APPVEYOR_REPO_TAG: true
+  - provider: GitHub
+    description: Draft release
+    auth_token:
+      secure: iJAvKTreoG/55DiyN7ViE+Q3Vu9BvurMk2VXzlN2bOX2i+G31ijdS5eD1u/iKJZ2
+    draft: true
+    on:
+      branch: master
+      #APPVEYOR_REPO_TAG: true
+  - provider: S3
+    bucket: svitlopulse.prod.releases
+    folder: $(APPVEYOR_BUILD_VERSION)
+    set_public: true
+    access_key_id:
+      secure: M06ZEA76yIIthDYokZg4PLdWfosyP/xANtRGuF2FiJE=
+    secret_access_key:
+      secure: MZbubX2fm5rR08gL8y3iKEzLA2/W0JO2HZpNpxByjwpJpr5lTSlLFm2/XqO8ePmE
+    on:
+      branch: master
+      #APPVEYOR_REPO_TAG: true
