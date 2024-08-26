@@ -27,6 +27,7 @@ deploy:
       #APPVEYOR_REPO_TAG: true
   - provider: S3
     bucket: svitlopulse.prod.releases
+    region: eu-west-1
     folder: $(APPVEYOR_BUILD_VERSION)
     set_public: true
     access_key_id:
