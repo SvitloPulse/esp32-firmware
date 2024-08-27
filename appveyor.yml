@@ -9,7 +9,7 @@ install:
     - cmd: pip3 install -U platformio
 
 test_script:
-    - cmd: pio run -e esp-c3-13u-4m
+    - cmd: pio run
     - cmd: python3 gen_manifest.py
 
 after_test:
