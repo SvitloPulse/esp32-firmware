@@ -10,14 +10,14 @@ install:
 
 test_script:
     - cmd: pio run -e esp-c3-13u-4m
+    - cmd: python3 gen_manifest.py
 
 after_test:
-  - ps: Get-ChildItem .pio\build\*\*-merged.bin | % { Push-AppveyorArtifact $_.FullName -FileName $_.Name }
-  - ps: Get-ChildItem .pio\build\*\*-manifest.json | % { Push-AppveyorArtifact $_.FullName -FileName $_.Name }
-
-# artifacts:
-#   - path: .pio/build/*/*-merged.bin
-#   - path: .pio/build/*/*-manifest.json
+  - ps: Get-ChildItem .pio\build\*\*-merged.bin | % { Push-AppveyorArtifact $_.FullName -FileName $(APPVEYOR_BUILD_VERSION)/$_.Name }
+  - ps: Get-ChildItem .pio\build\*\*-manifest.json | % { Push-AppveyorArtifact $_.FullName -FileName $(APPVEYOR_BUILD_VERSION)/$_.Name }
+  - ps: echo $(APPVEYOR_BUILD_VERSION) > latest.txt
+  - ps: Push-AppveyorArtifact manifest.json -FileName $(APPVEYOR_BUILD_VERSION)/manifest.json
+  - ps: Push-AppveyorArtifact latest.txt
 
 deploy:
   - provider: GitHub
