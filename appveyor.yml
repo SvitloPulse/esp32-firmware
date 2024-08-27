@@ -13,10 +13,10 @@ test_script:
     - cmd: python gen_manifest.py
 
 after_test:
-  - ps: Get-ChildItem .pio\build\*\*-merged.bin | % { Push-AppveyorArtifact $_.FullName -FileName $(APPVEYOR_BUILD_VERSION)/$_.Name }
-  - ps: Get-ChildItem .pio\build\*\*-manifest.json | % { Push-AppveyorArtifact $_.FullName -FileName $(APPVEYOR_BUILD_VERSION)/$_.Name }
-  - ps: echo $(APPVEYOR_BUILD_VERSION) > latest.txt
-  - ps: Push-AppveyorArtifact manifest.json -FileName $(APPVEYOR_BUILD_VERSION)/manifest.json
+  - ps: Get-ChildItem .pio\build\*\*-merged.bin | % { Push-AppveyorArtifact $_.FullName -FileName $Env:APPVEYOR_BUILD_VERSION/$_.Name }
+  - ps: Get-ChildItem .pio\build\*\*-manifest.json | % { Push-AppveyorArtifact $_.FullName -FileName $Env:APPVEYOR_BUILD_VERSION/$_.Name }
+  - ps: echo $Env:APPVEYOR_BUILD_VERSION > latest.txt
+  - ps: Push-AppveyorArtifact manifest.json -FileName $Env:APPVEYOR_BUILD_VERSION/manifest.json
   - ps: Push-AppveyorArtifact latest.txt
 
 deploy:
