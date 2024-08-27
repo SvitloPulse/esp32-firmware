@@ -1,6 +1,6 @@
 build: off
 cache:
-  - '%USERPROFILE%\.platformio -> appveyor.yml'
+  - '%USERPROFILE%\.platformio\packages -> appveyor.yml'
 init:
   - git config --global core.autocrlf input
 
@@ -11,10 +11,13 @@ install:
 test_script:
     - cmd: pio run -e esp-c3-13u-4m
 
+after_test:
+  - ps: Get-ChildItem .pio\build\*\*-merged.bin | % { Push-AppveyorArtifact $_.FullName -FileName $_.Name }
+  - ps: Get-ChildItem .pio\build\*\*-manifest.json | % { Push-AppveyorArtifact $_.FullName -FileName $_.Name }
 
-artifacts:
-  - path: .pio/build/*/*-merged.bin
-  - path: .pio/build/*/*-manifest.json
+# artifacts:
+#   - path: .pio/build/*/*-merged.bin
+#   - path: .pio/build/*/*-manifest.json
 
 deploy:
   - provider: GitHub
