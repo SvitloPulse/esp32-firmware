@@ -1,23 +1,32 @@
 build: off
 cache:
   - '%USERPROFILE%\.platformio\packages -> appveyor.yml'
+
+environment:
+  BUCKET_NAME: svitlopulse.prod.releases
+  AWS_REGION: eu-west-1
+  AWS_ACCESS_KEY_ID:
+    secure: bxCJoncg+CElwAozSwvx8hkmflN/oUnK4ldwGI38w88=
+  AWS_SECRET_ACCESS_KEY:
+    secure: Q8ANDgAueDwZJn126EDTaCk/lPKNgPLe6BUf6ICcNio/TOOVsauPtm3/Yw55Kps7
+
 init:
   - git config --global core.autocrlf input
 
 install:
     - cmd: SET PATH=%PATH%;C:\Python312-x64\Scripts
     - cmd: pip3 install -U platformio
+    - cmd: pip3 install -r requirements.txt
 
 test_script:
     - cmd: pio run
     - cmd: python gen_manifest.py
+    - cmd: python deploy.py
 
-after_test:
-  - ps: Get-ChildItem .pio\build\*\*-merged.bin | % { Push-AppveyorArtifact $_.FullName -FileName $Env:APPVEYOR_BUILD_VERSION/$_.Name }
-  - ps: Get-ChildItem .pio\build\*\*-manifest.json | % { Push-AppveyorArtifact $_.FullName -FileName $Env:APPVEYOR_BUILD_VERSION/$_.Name }
-  - ps: echo $Env:APPVEYOR_BUILD_VERSION > latest.txt
-  - ps: Push-AppveyorArtifact manifest.json -FileName $Env:APPVEYOR_BUILD_VERSION/manifest.json
-  - ps: Push-AppveyorArtifact latest.txt
+artifacts:
+  - path: .pio/build/*/*-merged.bin
+  - path: manifest.json
+
 
 deploy:
   - provider: GitHub
@@ -25,18 +34,6 @@ deploy:
     auth_token:
       secure: iJAvKTreoG/55DiyN7ViE+Q3Vu9BvurMk2VXzlN2bOX2i+G31ijdS5eD1u/iKJZ2
     draft: true
-    on:
-      branch: master
-      #APPVEYOR_REPO_TAG: true
-  - provider: S3
-    bucket: svitlopulse.prod.releases
-    region: eu-west-1
-    folder: $(APPVEYOR_BUILD_VERSION)
-    set_public: true
-    access_key_id:
-      secure: M06ZEA76yIIthDYokZg4PLdWfosyP/xANtRGuF2FiJE=
-    secret_access_key:
-      secure: MZbubX2fm5rR08gL8y3iKEzLA2/W0JO2HZpNpxByjwpJpr5lTSlLFm2/XqO8ePmE
     on:
       branch: master
       #APPVEYOR_REPO_TAG: true

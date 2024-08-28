@@ -5,3 +5,5 @@ src/config.hpp
 __pycache__/
 .env
 manifest.json
+*.bin
+releases.json
