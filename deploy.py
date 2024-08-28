@@ -8,6 +8,7 @@ RELEASE_VERSION = os.environ.get('APPVEYOR_BUILD_VERSION', '0.0.0')
 APPVEYOR_REPO_TAG = os.environ.get('APPVEYOR_REPO_TAG', 'false')
 
 if APPVEYOR_REPO_TAG != 'true':
+    print('Not a tag build. Skipping deployment.')
     exit(0)
 
 artifacts = [
@@ -28,8 +29,8 @@ except: #s3_client.exceptions.NoSuchKey:
     pass
 
 
-releases.append(RELEASE_VERSION)
-releases = list(set(releases))
+if RELEASE_VERSION not in releases:
+    releases.append(RELEASE_VERSION)
 
 with open('releases.json', 'w') as releases_fd:
     json.dump(releases, releases_fd, indent=2)
