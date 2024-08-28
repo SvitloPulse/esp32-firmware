@@ -36,4 +36,4 @@ deploy:
     draft: true
     on:
       branch: master
-      #APPVEYOR_REPO_TAG: true
+      APPVEYOR_REPO_TAG: true

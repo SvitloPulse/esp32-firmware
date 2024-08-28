@@ -5,6 +5,10 @@ from pathlib import Path
 
 BUCKET_NAME = os.environ['BUCKET_NAME']
 RELEASE_VERSION = os.environ.get('APPVEYOR_BUILD_VERSION', '0.0.0')
+APPVEYOR_REPO_TAG = os.environ.get('APPVEYOR_REPO_TAG', 'false')
+
+if APPVEYOR_REPO_TAG != 'true':
+    exit(0)
 
 artifacts = [
     '.pio/**/*-merged.bin',
