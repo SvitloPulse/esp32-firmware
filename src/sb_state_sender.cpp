@@ -27,7 +27,7 @@ esp_err_t sb_sender_send_ping(void) {
     esp_http_client_config_t config = {
         .url = SB_SVITLOBOT_API,
         .method = HTTP_METHOD_GET,
-        .timeout_ms = 30000,
+        .timeout_ms = 10000,
         .crt_bundle_attach = esp_crt_bundle_attach,
     };
 
@@ -39,9 +39,16 @@ esp_err_t sb_sender_send_ping(void) {
     esp_err_t err = esp_http_client_perform(client);
 
     if (err == ESP_OK) {
+        auto status_code = esp_http_client_get_status_code(client);
         ESP_LOGI(TAG, "HTTPS Status = %d, content_length = %"PRId64,
-                esp_http_client_get_status_code(client),
+                status_code,
                 esp_http_client_get_content_length(client));
+        if (status_code == 200) {
+            ESP_LOGI(TAG, "Ping sent successfully.");
+        } else {
+            ESP_LOGE(TAG, "Error sending ping: %d", status_code);
+            err = ESP_ERR_INVALID_RESPONSE;
+        }
     } else {
         ESP_LOGE(TAG, "Error perform http request %s", esp_err_to_name(err));
     }

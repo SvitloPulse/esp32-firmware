@@ -29,11 +29,12 @@ static esp_timer_handle_t s_smart_config_timeout_timer;
 static TaskHandle_t blinker_task_handle = NULL;
 static const int MAX_CONNECTION_RETRIES = 10;
 static int connection_retries = 0;
-static const uint64_t DEEP_SLEEP_TIMEOUT = 5 * 60 * 1000000; // 5 minutes
 
 #ifndef SB_WIFI_SSID
     static void _smart_config_task(void *param);
 #endif
+
+static void _reconnect_task(void *param);
 
 static void _handle_wifi_events(void *arg, esp_event_base_t event_base,
                                int32_t event_id, void *event_data)
@@ -87,16 +88,7 @@ static void _handle_wifi_events(void *arg, esp_event_base_t event_base,
             esp_restart();
 #endif
         } else {
-#ifndef SB_WIFI_SSID
-            wifi_config_t config;
-            bzero(&config, sizeof(wifi_config_t));
-            ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &config));
-            ESP_LOGI(LOG_TAG, "SSID: %s", (char *)config.sta.ssid);
-            ESP_LOGI(LOG_TAG, "PWD: %s", (char *)config.sta.password);
-            ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &config));
-#endif
-            esp_wifi_connect();
-            connection_retries++;
+            xTaskCreate(_reconnect_task, "reconnect_task", 4096, arg, 3, NULL);
         }
     }
     else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
@@ -105,6 +97,24 @@ static void _handle_wifi_events(void *arg, esp_event_base_t event_base,
         xEventGroupSetBits(s_wifi_event_group, CONNECTED_BIT);
         connection_retries = 0;
     }
+}
+
+static void _reconnect_task(void *param)
+{
+    const sb_wireless_config_t * wconfig = (sb_wireless_config_t *)param;
+    ESP_LOGI(LOG_TAG, "Will try reconnect WiFi in %llu s", wconfig->wifi_connection_timeout_us / 1000 / 1000);
+    vTaskDelay(wconfig->wifi_connection_timeout_us / portTICK_PERIOD_MS / 1000);
+#ifndef SB_WIFI_SSID
+    wifi_config_t config;
+    bzero(&config, sizeof(wifi_config_t));
+    ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &config));
+    ESP_LOGI(LOG_TAG, "SSID: %s", (char *)config.sta.ssid);
+    ESP_LOGI(LOG_TAG, "PWD: %s", (char *)config.sta.password);
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &config));
+#endif
+    esp_wifi_connect();
+    connection_retries++;
+    vTaskDelete(NULL);
 }
 
 #ifndef SB_WIFI_SSID
