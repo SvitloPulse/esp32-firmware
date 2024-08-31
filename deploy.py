@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 BUCKET_NAME = os.environ['BUCKET_NAME']
-RELEASE_VERSION = os.environ.get('APPVEYOR_BUILD_VERSION', '0.0.0')
+RELEASE_VERSION = os.environ.get('APPVEYOR_REPO_TAG_NAME', '0.0.0')
 APPVEYOR_REPO_TAG = os.environ.get('APPVEYOR_REPO_TAG', 'false')
 
 if APPVEYOR_REPO_TAG != 'true':
