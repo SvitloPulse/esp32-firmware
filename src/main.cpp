@@ -20,7 +20,7 @@ static const uint64_t WIFI_CONNECTION_TIMEOUT_US = 10000000;  // 10 seconds
 static const uint64_t SMART_CONFIG_TIMEOUT_US = 5 * 60000000; // 5 minutes
 static const uint32_t CONFIG_BLINK_INTERVAL_MS = 300;
 static const uint32_t POWER_ON_BLINK_INTERVAL_MS = 100;
-static const uint32_t PING_INTERVAL_MS = 60 * 1000; // 1 minute
+static const uint32_t PING_INTERVAL_MS = 90 * 1000; // 1 minute
 
 static void app_task(void *param)
 {
