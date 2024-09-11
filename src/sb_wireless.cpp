@@ -16,6 +16,7 @@
 #include "sb_wireless.hpp"
 #include "defconfig.hpp"
 #include "sb_config.hpp"
+#include "sb_web_server.hpp"
 
 static const char *LOG_TAG = "sb_wireless";
 
@@ -96,6 +97,7 @@ static void _handle_wifi_events(void *arg, esp_event_base_t event_base,
         ESP_LOGI(LOG_TAG, "Connected to AP and got IP address");
         xEventGroupSetBits(s_wifi_event_group, CONNECTED_BIT);
         connection_retries = 0;
+        esp_event_post(SB_STATE_CHANGE_EVENTS, SB_SSID_CHANGED, NULL, 0, portMAX_DELAY);
     }
 }
 
@@ -265,6 +267,7 @@ void sb_wireless_init(const sb_wireless_config_t *config) {
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_start());
+    ESP_ERROR_CHECK(esp_wifi_set_max_tx_power(34));
 }
 
 esp_err_t sb_wireless_ensure_connected(void) {

@@ -12,6 +12,9 @@ try:
     from dotenv import load_dotenv
     load_dotenv()
 
+    import urllib.request
+    urllib.request.urlretrieve("https://github.com/SvitloPulse/embedded-web-ui/releases/latest/download/webpage.gz", "webpage.bin")
+
     print("Current CLI targets", COMMAND_LINE_TARGETS)
     print("Current Build targets", BUILD_TARGETS)
 

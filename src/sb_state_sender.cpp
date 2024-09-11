@@ -26,6 +26,7 @@ esp_err_t sb_sender_send_ping(void) {
 #endif
     esp_http_client_config_t config = {
         .url = SB_SVITLOBOT_API,
+        .user_agent = PROJECT_NAME "/" PROJECT_VER,
         .method = HTTP_METHOD_GET,
         .timeout_ms = 10000,
         .crt_bundle_attach = esp_crt_bundle_attach,

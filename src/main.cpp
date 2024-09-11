@@ -8,11 +8,18 @@
 #include <esp_netif.h>
 #include <esp_event.h>
 #include <driver/gpio.h>
+#include <mdns.h>
+#include <driver/temperature_sensor.h>
+#include <math.h>
+#include <esp_netif_sntp.h>
+#include <esp_sntp.h>
+
 
 #include "defconfig.hpp"
 #include "sb_config.hpp"
 #include "sb_wireless.hpp"
 #include "sb_state_sender.hpp"
+#include "sb_web_server.hpp"
 
 static const char *LOG_TAG = "main";
 
@@ -58,6 +65,47 @@ static void power_on_blink_task(void *param)
     vTaskDelete(NULL);
 }
 
+static void temperature_sensor_reading_task(void *param)
+{
+    temperature_sensor_handle_t temp_handle = NULL;
+    temperature_sensor_config_t temp_sensor_config = TEMPERATURE_SENSOR_CONFIG_DEFAULT(20, 100);
+    ESP_ERROR_CHECK(temperature_sensor_install(&temp_sensor_config, &temp_handle));
+    ESP_LOGI(LOG_TAG, "Enable temperature sensor");
+    ESP_ERROR_CHECK(temperature_sensor_enable(temp_handle));
+    float tsens_value = 0.0;
+    uint8_t log_delay_counter = 0;
+    while(1)
+    {
+        ESP_ERROR_CHECK(temperature_sensor_get_celsius(temp_handle, &tsens_value));
+        ESP_ERROR_CHECK(esp_event_post(SB_STATE_CHANGE_EVENTS, SB_TEMPERATURE_MEASURED, &tsens_value, sizeof(tsens_value), portMAX_DELAY));
+        if (log_delay_counter % 6 == 0) {
+            ESP_LOGI(LOG_TAG, "Temperature value %.02f C", tsens_value);
+            log_delay_counter = 0;
+        }
+        log_delay_counter++;
+        vTaskDelay(10000 / portTICK_PERIOD_MS);
+    }
+}
+
+static void rssi_measurement_task(void *param)
+{
+    uint8_t log_delay_counter = 0;
+    while(1)
+    {
+        sb_wireless_ensure_connected();
+        wifi_ap_record_t ap_info;
+        ESP_ERROR_CHECK(esp_wifi_sta_get_ap_info(&ap_info));
+        if (log_delay_counter % 6 == 0)
+        {
+            ESP_LOGI(LOG_TAG, "SSID: %s, RSSI: %d", ap_info.ssid, ap_info.rssi);
+            log_delay_counter = 0;
+        }
+        log_delay_counter++;
+        ESP_ERROR_CHECK(esp_event_post(SB_STATE_CHANGE_EVENTS, SB_RSSI_MEASURED, &ap_info.rssi, sizeof(ap_info.rssi), portMAX_DELAY));
+        vTaskDelay(10000 / portTICK_PERIOD_MS);
+    }
+}
+
 static esp_err_t configure_gpio(void)
 {
     gpio_config_t led_io_conf = {};
@@ -85,11 +133,23 @@ extern "C" void app_main()
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     ESP_ERROR_CHECK(configure_gpio());
+
+    esp_sntp_config_t sntp_config = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
+    ESP_ERROR_CHECK(esp_netif_sntp_init(&sntp_config));
+
+    // Initialize mDNS
+    ESP_ERROR_CHECK(mdns_init());
+    ESP_ERROR_CHECK(mdns_hostname_set(PROJECT_NAME_LOWER));
+    ESP_ERROR_CHECK(mdns_instance_name_set(PROJECT_NAME " " PROJECT_VER));
+    ESP_ERROR_CHECK(mdns_service_add(NULL, "_http", "_tcp", 80, NULL, 0));
+    ESP_ERROR_CHECK(mdns_service_instance_name_set("_http", "_tcp", PROJECT_NAME " " PROJECT_VER " Web Server"));
+
     gpio_set_level(LED_PIN, 1);
 
     xTaskCreate(power_on_blink_task, "power_on_blink", 4096, NULL, 3, NULL);
 
     sb_config_init();
+    sb_web_server_init();
 
 #ifdef SB_SMARTCONFIG_KEY
     int8_t smart_config_key[17] = SB_SMARTCONFIG_KEY;
@@ -101,4 +161,10 @@ extern "C" void app_main()
     sb_sender_init();
 
     xTaskCreate(app_task, "app_task", 4096, NULL, 3, NULL);
+    xTaskCreate(temperature_sensor_reading_task, "temperature", 4096, NULL, 3, NULL);
+    xTaskCreate(rssi_measurement_task, "rssi", 4096, NULL, 3, NULL);
+
+    // Start web server
+    sb_wireless_ensure_connected();
+    sb_web_server_start();
 }

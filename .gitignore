@@ -7,3 +7,5 @@ __pycache__/
 manifest.json
 *.bin
 releases.json
+webpage.gz
+managed_components/
