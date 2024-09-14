@@ -2,6 +2,7 @@
 #include <esp_wifi.h>
 #include <esp_timer.h>
 #include <esp_log.h>
+#include <esp_chip_info.h>
 #include <time.h>
 
 #include "sb_web_server.hpp"
@@ -24,6 +25,31 @@ static sb_server_state_t state = {
 
 char response_buffer[1024];
 
+static const char* get_chip_model(esp_chip_model_t model) {
+    switch (model) {
+        case CHIP_ESP32:
+            return "ESP32";
+        case CHIP_ESP32S2:
+            return "ESP32-S2";
+        case CHIP_ESP32S3:
+            return "ESP32-S3";
+        case CHIP_ESP32C3:
+            return "ESP32-C3";
+        case CHIP_ESP32C2:
+            return "ESP32-C2";
+        case CHIP_ESP32C6:
+            return "ESP32-C6";
+        case CHIP_ESP32H2:
+            return "ESP32-H2";
+        case CHIP_ESP32P4:
+            return "ESP32-P4";
+        case CHIP_POSIX_LINUX:
+            return "POSIX/Linux Simulator";
+        default:
+            return "Unknown Model";
+    }
+}
+
 static esp_err_t index_html_get_handler(httpd_req_t *req)
 {
     httpd_resp_set_status(req, "307 Temporary Redirect");
@@ -43,9 +69,11 @@ static esp_err_t get_index_handler(httpd_req_t *req)
 
 static esp_err_t get_state_handler(httpd_req_t *req)
 {
+    esp_chip_info_t chip_info;
+    esp_chip_info(&chip_info);
     snprintf(response_buffer, sizeof(response_buffer),
-             "{\"status\":\"%s\",\"ssid\":\"%s\",\"lastPing\":%" PRIu64 ",\"temperature\":%lu,\"version\":\"" PROJECT_VER "\", \"rssi\":%d}",
-             state.status, state.ssid, state.lastPing, state.temperature, state.rssi);
+             "{\"status\":\"%s\",\"ssid\":\"%s\",\"lastPing\":%" PRIu64 ",\"temperature\":%lu,\"version\":\"" PROJECT_VER "\", \"rssi\":%d, \"chip_model\":\"%s\"}",
+             state.status, state.ssid, state.lastPing, state.temperature, state.rssi, get_chip_model(chip_info.model));
     httpd_resp_set_type(req, "application/json");
     httpd_resp_send(req, (const char *)response_buffer, strlen(response_buffer));
     return ESP_OK;
