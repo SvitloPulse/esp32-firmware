@@ -1,10 +1,12 @@
 #include <esp_log.h>
 #include <esp_crt_bundle.h>
 #include <esp_http_client.h>
+#include <esp_event.h>
 
 #include "defconfig.hpp"
 #include "sb_state_sender.hpp"
 #include "sb_config.hpp"
+#include "sb_web_server.hpp"
 
 static const char *TAG = "sb_state_sender";
 static char buffer[1024];
@@ -46,8 +48,10 @@ esp_err_t sb_sender_send_ping(void) {
                 esp_http_client_get_content_length(client));
         if (status_code == 200) {
             ESP_LOGI(TAG, "Ping sent successfully.");
+            ESP_ERROR_CHECK(esp_event_post(SB_STATE_CHANGE_EVENTS, SB_PING_SENT, NULL, 0, portMAX_DELAY));
         } else {
             ESP_LOGE(TAG, "Error sending ping: %d", status_code);
+            ESP_ERROR_CHECK(esp_event_post(SB_STATE_CHANGE_EVENTS, SB_PING_FAILED, NULL, 0, portMAX_DELAY));
             err = ESP_ERR_INVALID_RESPONSE;
         }
     } else {

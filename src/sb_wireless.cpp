@@ -267,7 +267,11 @@ void sb_wireless_init(const sb_wireless_config_t *config) {
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_start());
-    ESP_ERROR_CHECK(esp_wifi_set_max_tx_power(34));
+
+#ifdef LIMIT_WIFI_TX_POWER
+    ESP_ERROR_CHECK(esp_wifi_set_max_tx_power(LIMIT_WIFI_TX_POWER));
+#endif
+
 }
 
 esp_err_t sb_wireless_ensure_connected(void) {

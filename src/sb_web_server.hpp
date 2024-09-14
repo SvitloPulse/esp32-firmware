@@ -11,6 +11,7 @@ struct sb_server_state_t {
     uint64_t lastPing;
     uint32_t temperature;
     int8_t rssi;
+    uint8_t pings_failed;
 };
 
 ESP_EVENT_DECLARE_BASE(SB_STATE_CHANGE_EVENTS);

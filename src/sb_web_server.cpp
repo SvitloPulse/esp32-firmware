@@ -2,6 +2,7 @@
 #include <esp_wifi.h>
 #include <esp_timer.h>
 #include <esp_log.h>
+#include <time.h>
 
 #include "sb_web_server.hpp"
 
@@ -18,7 +19,8 @@ static sb_server_state_t state = {
     .ssid = "",
     .lastPing = 0,
     .temperature = 0,
-    .rssi = 0};
+    .rssi = 0,
+    .pings_failed = 0};
 
 char response_buffer[1024];
 
@@ -67,31 +69,54 @@ httpd_uri_t uri_status_get = {
     .handler = get_state_handler,
     .user_ctx = NULL};
 
-static void on_temperature_measured(void *handler_arg, esp_event_base_t base, int32_t id, void *event_data)
+static void on_sb_state_change(void *handler_arg, esp_event_base_t base, int32_t id, void *event_data)
 {
-    state.temperature = (uint32_t)roundf(*(float *)event_data);
-}
-
-static void on_ssid_changed(void *handler_arg, esp_event_base_t base, int32_t id, void *event_data)
-{
-    wifi_config_t config;
-    bzero(&config, sizeof(wifi_config_t));
-    ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &config));
-    bzero(state.ssid, sizeof(state.ssid));
-    strncpy(state.ssid, (const char *)config.sta.ssid, sizeof(state.ssid) - 1);
-}
-
-static void on_rssi_measured(void *handler_arg, esp_event_base_t base, int32_t id, void *event_data)
-{
-    state.rssi = *(int8_t *)event_data;
-    ESP_LOGI(LOG_TAG, "RSSI received: %d", *(int8_t *)event_data);
+    switch (id)
+    {
+    case SB_SSID_CHANGED:
+    {
+        wifi_config_t config;
+        bzero(&config, sizeof(wifi_config_t));
+        ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &config));
+        bzero(state.ssid, sizeof(state.ssid));
+        strncpy(state.ssid, (const char *)config.sta.ssid, sizeof(state.ssid) - 1);
+        break;
+    }
+    case SB_TEMPERATURE_MEASURED:
+        state.temperature = (uint32_t)roundf(*(float *)event_data);
+        break;
+    case SB_RSSI_MEASURED:
+        state.rssi = *(int8_t *)event_data;
+        break;
+    case SB_PING_SENT:
+    {
+        time_t timestamp = 0;
+        time(&timestamp);
+        state.lastPing = timestamp;
+        strncpy(state.status, "ok", sizeof(state.status) - 1);
+        state.pings_failed = 0;
+        break;
+    }
+    case SB_PING_FAILED:
+        state.pings_failed++;
+        if (state.pings_failed > 0)
+        {
+            strncpy(state.status, "warning", sizeof(state.status) - 1);
+        }
+        if (state.pings_failed >= 3)
+        {
+            strncpy(state.status, "error", sizeof(state.status) - 1);
+        }
+        break;
+    default:
+        ESP_LOGW(LOG_TAG, "Unknown event id: %ld", id);
+        break;
+    }
 }
 
 void sb_web_server_init(void)
 {
-    ESP_ERROR_CHECK(esp_event_handler_register(SB_STATE_CHANGE_EVENTS, SB_TEMPERATURE_MEASURED, on_temperature_measured, NULL));
-    ESP_ERROR_CHECK(esp_event_handler_register(SB_STATE_CHANGE_EVENTS, SB_SSID_CHANGED, on_ssid_changed, NULL));
-    ESP_ERROR_CHECK(esp_event_handler_register(SB_STATE_CHANGE_EVENTS, SB_RSSI_MEASURED, on_rssi_measured, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register(SB_STATE_CHANGE_EVENTS, ESP_EVENT_ANY_ID, on_sb_state_change, NULL));
 }
 
 httpd_handle_t sb_web_server_start(void)
