@@ -1,0 +1,79 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to build from'
+        required: false
+        default: 'master'
+
+env:
+  BUCKET_NAME: svitlopulse.prod.releases
+  AWS_REGION: eu-west-1
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install -U platformio
+          pip install -r requirements.txt
+      
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: ${{ runner.os }}-platformio-${{ hashFiles('**/platformio.ini') }}
+          restore-keys: |
+            ${{ runner.os }}-platformio-
+      
+      - name: Build firmware
+        run: pio run
+      
+      - name: Generate manifest
+        run: python gen_manifest.py
+        env:
+          APPVEYOR_BUILD_VERSION: ${{ github.run_number }}
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-build-${{ github.run_number }}
+          path: |
+            .pio/build/*/*-merged.bin
+            manifest.json
+      
+      - name: Deploy to S3
+        if: startsWith(github.ref, 'refs/tags/')
+        run: python deploy.py
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          APPVEYOR_REPO_TAG: 'true'
+          APPVEYOR_REPO_TAG_NAME: ${{ github.ref_name }}
+      
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: |
+            .pio/build/*/*-merged.bin
+            manifest.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
