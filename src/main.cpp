@@ -35,8 +35,6 @@ static void app_task(void *param)
     sb_wireless_ensure_connected();
     while(1)
     {
-        ESP_LOGI(LOG_TAG, "Waiting %lu seconds before next ping...", PING_INTERVAL_MS / 1000);
-        vTaskDelay(PING_INTERVAL_MS / portTICK_PERIOD_MS);
         ESP_LOGI(LOG_TAG, "Sending ping to Svitlobot BE.");
         gpio_set_level(LED_PIN, 1);
         sb_wireless_ensure_connected();
@@ -49,6 +47,8 @@ static void app_task(void *param)
             gpio_set_level(LED_PIN, 0);
             ESP_LOGI(LOG_TAG, "Ping sent successfully.");
         }
+        ESP_LOGI(LOG_TAG, "Waiting %lu seconds before next ping...", PING_INTERVAL_MS / 1000);
+        vTaskDelay(PING_INTERVAL_MS / portTICK_PERIOD_MS);
     }
 }
 
