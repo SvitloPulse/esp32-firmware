@@ -40,7 +40,7 @@ try:
             platform.get_package_dir("tool-esptoolpy") or "", "esptool.py")
     offset_image_pairs = []
     for image in env.get("FLASH_EXTRA_IMAGES", []):
-        offset_image_pairs += [image[0], env.subst(image[1])]
+        offset_image_pairs += [str(image[0]), env.subst(image[1])]
     merged_bin = f"$BUILD_DIR/{pioenv}-$PROGNAME-merged.bin"
     env.AddPostAction(
         "$BUILD_DIR/${PROGNAME}.bin",
@@ -51,7 +51,7 @@ try:
             "-o", merged_bin,
             "--flash_mode", "${__get_board_flash_mode(__env__)}",
             "--flash_size", board.get("upload.flash_size", "detect"),
-            "$ESP32_APP_OFFSET",
+            str(env.subst("$ESP32_APP_OFFSET")),
             "$BUILD_DIR/${PROGNAME}.bin",
         ] + offset_image_pairs), "Merging firmware files to $BUILD_DIR/$PROGNAME-merged.bin")
     )
