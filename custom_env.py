@@ -20,6 +20,7 @@ try:
     smartconfig_key = os.environ.get('SB_SMARTCONFIG_KEY')
     wifi_ssid = os.environ.get('SB_WIFI_SSID')
     wifi_password = os.environ.get('SB_WIFI_PWD')
+    ping_target = os.environ.get('SB_PING_TARGET')
 
     if smartconfig_key and len(smartconfig_key) != SMARTCONFIG_KEY_LEN:
         raise RuntimeError('Invalid SmartConfig key. Must be 16 characters long')
@@ -31,13 +32,14 @@ try:
         f.write(f'#define SB_SMARTCONFIG_KEY "{smartconfig_key}"\n') if smartconfig_key else None
         f.write(f'#define SB_WIFI_SSID "{wifi_ssid}"\n') if wifi_ssid else None
         f.write(f'#define SB_WIFI_PWD "{wifi_password}"\n') if wifi_password else None
+        f.write(f'#define SB_PING_TARGET "{ping_target}"\n') if ping_target else None
         f.write('\n')
     platform = env.PioPlatform()
     board = env.BoardConfig()
     pioenv = env['PIOENV']
     mcu = board.get("build.mcu", "esp32")
     UPLOADER=os.path.join(
-            platform.get_package_dir("tool-esptoolpy") or "", "esptool.py")
+            platform.get_package_dir("tool-esptoolpy") or "", "esptool")
     offset_image_pairs = []
     for image in env.get("FLASH_EXTRA_IMAGES", []):
         offset_image_pairs += [str(image[0]), env.subst(image[1])]
@@ -47,10 +49,10 @@ try:
         env.VerboseAction(" ".join([
             "$PYTHONEXE", UPLOADER, 
             "--chip", mcu, 
-            "merge_bin", 
+            "merge-bin", 
             "-o", merged_bin,
-            "--flash_mode", "${__get_board_flash_mode(__env__)}",
-            "--flash_size", board.get("upload.flash_size", "detect"),
+            "--flash-mode", "${__get_board_flash_mode(__env__)}",
+            "--flash-size", board.get("upload.flash_size", "detect"),
             str(env.subst("$ESP32_APP_OFFSET")),
             "$BUILD_DIR/${PROGNAME}.bin",
         ] + offset_image_pairs), "Merging firmware files to $BUILD_DIR/$PROGNAME-merged.bin")

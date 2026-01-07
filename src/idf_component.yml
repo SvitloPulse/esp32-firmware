@@ -3,3 +3,5 @@ dependencies:
   idf: ">=5.0"
   espressif/mdns:
     version: "1.4.0"
+  espressif/led_strip:
+    version: "3.0.0"

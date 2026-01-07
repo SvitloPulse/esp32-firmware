@@ -1,4 +1,4 @@
-#pragma once
+#include <stdint.h>
 #include "config.hpp"
 
 #ifndef SB_SVITLOBOT_API
@@ -17,7 +17,22 @@
     #define SB_WIFI_PWD "pwd"      // put your password here
 #endif
 
-#ifndef LED_PIN
-    // Valid for ESP32-C3 Super Mini Board, adjust if needed
-    #define LED_PIN GPIO_NUM_8
+// Replace 0 below with 1 to hardcode ping address
+#if 0
+    #define SB_PING_TARGET "192.168.0.1"
 #endif
+
+#ifndef LED_PIN
+    #if CONFIG_IDF_TARGET_ESP32C3
+        #define LED_PIN GPIO_NUM_8
+        #define LED_ACTIVE_LOW 1
+    #elif CONFIG_IDF_TARGET_ESP32C6
+        #define LED_PIN GPIO_NUM_8
+        #define USE_LED_STRIP 1
+    #elif CONFIG_IDF_TARGET_ESP32
+        #define LED_PIN GPIO_NUM_10
+        #define LED_ACTIVE_LOW 1
+    #endif 
+#endif
+
+void sb_led_set_level(uint32_t level);

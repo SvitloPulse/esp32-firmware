@@ -12,6 +12,7 @@ struct sb_server_state_t {
     uint32_t temperature;
     int8_t rssi;
     uint8_t pings_failed;
+    int8_t local_ping_ok;
 };
 
 ESP_EVENT_DECLARE_BASE(SB_STATE_CHANGE_EVENTS);
@@ -22,6 +23,7 @@ enum sb_state_change_event_id_t {
     SB_PING_FAILED,
     SB_TEMPERATURE_MEASURED,
     SB_RSSI_MEASURED,
+    SB_LOCAL_PING_RESULT,
 };
 
 void sb_web_server_init(void);

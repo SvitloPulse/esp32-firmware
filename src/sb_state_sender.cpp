@@ -6,6 +6,7 @@
 #include "defconfig.hpp"
 #include "sb_state_sender.hpp"
 #include "sb_config.hpp"
+#include "sb_pinger.hpp"
 #include "sb_web_server.hpp"
 
 static const char *TAG = "sb_state_sender";
@@ -23,6 +24,17 @@ esp_err_t sb_sender_init(void) {
 }
 
 esp_err_t sb_sender_send_ping(void) {
+#ifdef SB_PING_TARGET
+    bool ping_ok = sb_pinger_check(SB_PING_TARGET);
+    ESP_ERROR_CHECK(esp_event_post(SB_STATE_CHANGE_EVENTS, SB_LOCAL_PING_RESULT, &ping_ok, sizeof(ping_ok), portMAX_DELAY));
+
+    if (!ping_ok) {
+      ESP_LOGE(TAG, "Skipping Svitlobot request due to ping failure.");
+
+      return ESP_FAIL;
+    }
+#endif
+
 #ifndef SB_SVITLOBOT_KEY
     ESP_ERROR_CHECK(sb_config_get(sb_config::KEY, key, &key_size));
 #endif
@@ -43,7 +55,7 @@ esp_err_t sb_sender_send_ping(void) {
 
     if (err == ESP_OK) {
         auto status_code = esp_http_client_get_status_code(client);
-        ESP_LOGI(TAG, "HTTPS Status = %d, content_length = %"PRId64,
+        ESP_LOGI(TAG, "HTTPS Status = %d, content_length = %" PRId64,
                 status_code,
                 esp_http_client_get_content_length(client));
         if (status_code == 200) {

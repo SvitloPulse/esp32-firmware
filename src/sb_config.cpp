@@ -5,7 +5,7 @@
 const char* sb_config::KEY = "key";
 static const char *LOG_TAG = "sb_config";
 static const char nvs_namespace[] = "sb_cfg";
-static nvs_handle_t s_nvs_handle = NULL;
+static nvs_handle_t s_nvs_handle = 0;
 
 esp_err_t sb_config_init(void)
 {
