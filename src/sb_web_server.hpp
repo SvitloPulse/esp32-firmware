@@ -8,7 +8,7 @@
 struct sb_server_state_t {
     char status[16];
     char ssid[32];
-    uint64_t lastPing;
+    int64_t last_ping_us;
     uint32_t temperature;
     int8_t rssi;
     uint8_t pings_failed;

@@ -3,7 +3,6 @@
 #include <esp_timer.h>
 #include <esp_log.h>
 #include <esp_chip_info.h>
-#include <time.h>
 
 #include "sb_web_server.hpp"
 
@@ -18,7 +17,7 @@ static const char *LOG_TAG = "sb_web_server";
 static sb_server_state_t state = {
     .status = "pending",
     .ssid = "",
-    .lastPing = 0,
+    .last_ping_us = 0,
     .temperature = 0,
     .rssi = 0,
     .pings_failed = 0};
@@ -72,8 +71,9 @@ static esp_err_t get_state_handler(httpd_req_t *req)
     esp_chip_info_t chip_info;
     esp_chip_info(&chip_info);
     snprintf(response_buffer, sizeof(response_buffer),
-             "{\"status\":\"%s\",\"ssid\":\"%s\",\"lastPing\":%" PRIu64 ",\"temperature\":%lu,\"version\":\"" PROJECT_VER "\", \"rssi\":%d, \"chip_model\":\"%s\"}",
-             state.status, state.ssid, state.lastPing, state.temperature, state.rssi, get_chip_model(chip_info.model));
+             "{\"status\":\"%s\",\"ssid\":\"%s\",\"last_ping_us\":%" PRId64 ",\"uptime_us\":%" PRId64 ",\"temperature\":%lu,\"version\":\"" PROJECT_VER "\",\"rssi\":%d,\"chip_model\":\"%s\"}",
+             state.status, state.ssid, state.last_ping_us, esp_timer_get_time(),
+             state.temperature, state.rssi, get_chip_model(chip_info.model));
     httpd_resp_set_type(req, "application/json");
     httpd_resp_send(req, (const char *)response_buffer, strlen(response_buffer));
     return ESP_OK;
@@ -118,9 +118,7 @@ static void on_sb_state_change(void *handler_arg, esp_event_base_t base, int32_t
         break;
     case SB_PING_SENT:
     {
-        time_t timestamp = 0;
-        time(&timestamp);
-        state.lastPing = timestamp;
+        state.last_ping_us = esp_timer_get_time();
         strncpy(state.status, "ok", sizeof(state.status) - 1);
         state.pings_failed = 0;
         break;

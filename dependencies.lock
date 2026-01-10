@@ -1,6 +1,7 @@
 dependencies:
   espressif/mdns:
-    component_hash: af6306fe65d637a3683d1cf671508fcedd6b05f9ca029a8815abeab64001fb8d
+    component_hash: 
+      af6306fe65d637a3683d1cf671508fcedd6b05f9ca029a8815abeab64001fb8d
     dependencies:
     - name: idf
       require: private
