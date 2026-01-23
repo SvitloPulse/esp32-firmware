@@ -27,7 +27,7 @@
 #ifndef LED_PIN
     #if BOARD_ESP32C3_SUPERMINI
         #define LED_PIN GPIO_NUM_8
-        #define LED_ACTIVE_LOW 1
+        #define LED_ACTIVE_LOW 0
     #elif BOARD_ESP32C6_ZERO
         #define LED_PIN GPIO_NUM_8
         #define USE_LED_STRIP 1

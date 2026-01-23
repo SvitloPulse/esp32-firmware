@@ -67,15 +67,15 @@ static void app_task(void *param)
     while(1)
     {
         ESP_LOGI(LOG_TAG, "Sending ping to Svitlobot BE.");
-        sb_led_set_level(1);
+        sb_led_set_level(0);
         sb_wireless_ensure_connected();
         esp_err_t err = sb_sender_send_ping();
         if (err != ESP_OK)
         {
-            sb_led_set_level(1);
+            sb_led_set_level(0);
             ESP_LOGE(LOG_TAG, "Error sending state: %s", esp_err_to_name(err));
         } else {
-            sb_led_set_level(0);
+            sb_led_set_level(1);
             ESP_LOGI(LOG_TAG, "Ping sent successfully.");
         }
         ESP_LOGI(LOG_TAG, "Waiting %lu seconds before next ping...", PING_INTERVAL_MS / 1000);
@@ -210,8 +210,6 @@ extern "C" void app_main()
     ESP_ERROR_CHECK(mdns_instance_name_set(PROJECT_NAME " " PROJECT_VER));
     ESP_ERROR_CHECK(mdns_service_add(NULL, "_http", "_tcp", 80, NULL, 0));
     ESP_ERROR_CHECK(mdns_service_instance_name_set("_http", "_tcp", PROJECT_NAME " " PROJECT_VER " Web Server"));
-
-    sb_led_set_level(1);
 
     xTaskCreate(power_on_blink_task, "power_on_blink", 4096, NULL, 3, NULL);
 
