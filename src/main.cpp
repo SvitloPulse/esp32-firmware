@@ -9,11 +9,12 @@
 #include <esp_event.h>
 #include <driver/gpio.h>
 #include <mdns.h>
+#if CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C6
 #include <driver/temperature_sensor.h>
+#endif
 #include <math.h>
 #include <esp_netif_sntp.h>
 #include <esp_sntp.h>
-
 
 #include "defconfig.hpp"
 #include "sb_config.hpp"
@@ -21,7 +22,37 @@
 #include "sb_state_sender.hpp"
 #include "sb_web_server.hpp"
 
+#ifdef USE_LED_STRIP
+#include "led_strip.h"
+
+static led_strip_handle_t led_strip;
+#endif
+
 static const char *LOG_TAG = "main";
+
+#if CONFIG_IDF_TARGET_ESP32
+extern "C" {
+uint8_t temprature_sens_read();
+}
+#endif
+
+void sb_led_set_level(uint32_t level)
+{
+#ifdef USE_LED_STRIP
+    if (level == 1) {
+        led_strip_set_pixel(led_strip, 0, 0, 0, 16); // Blue to match C3 Supermini
+    } else {
+        led_strip_clear(led_strip);
+    }
+    led_strip_refresh(led_strip);
+#else
+    #ifdef LED_ACTIVE_LOW
+        gpio_set_level(LED_PIN, level > 0 ? 0 : 1);
+    #else
+        gpio_set_level(LED_PIN, level > 0 ? 1 : 0);
+    #endif
+#endif
+}
 
 static const uint64_t WIFI_CONNECTION_TIMEOUT_US = 10000000;  // 10 seconds
 static const uint64_t SMART_CONFIG_TIMEOUT_US = 5 * 60000000; // 5 minutes
@@ -36,15 +67,15 @@ static void app_task(void *param)
     while(1)
     {
         ESP_LOGI(LOG_TAG, "Sending ping to Svitlobot BE.");
-        gpio_set_level(LED_PIN, 1);
+        sb_led_set_level(1);
         sb_wireless_ensure_connected();
         esp_err_t err = sb_sender_send_ping();
         if (err != ESP_OK)
         {
-            gpio_set_level(LED_PIN, 1);
+            sb_led_set_level(1);
             ESP_LOGE(LOG_TAG, "Error sending state: %s", esp_err_to_name(err));
         } else {
-            gpio_set_level(LED_PIN, 0);
+            sb_led_set_level(0);
             ESP_LOGI(LOG_TAG, "Ping sent successfully.");
         }
         ESP_LOGI(LOG_TAG, "Waiting %lu seconds before next ping...", PING_INTERVAL_MS / 1000);
@@ -56,27 +87,38 @@ static void power_on_blink_task(void *param)
 {
     for (uint8_t i = 0; i < 5; i++)
     {
-        gpio_set_level(LED_PIN, 1);
+        sb_led_set_level(1);
         vTaskDelay(POWER_ON_BLINK_INTERVAL_MS / portTICK_PERIOD_MS);
-        gpio_set_level(LED_PIN, 0);
+        sb_led_set_level(0);
         vTaskDelay(POWER_ON_BLINK_INTERVAL_MS / portTICK_PERIOD_MS);
     }
-    gpio_set_level(LED_PIN, 1);
+    sb_led_set_level(1);
     vTaskDelete(NULL);
 }
 
 static void temperature_sensor_reading_task(void *param)
 {
+    ESP_LOGI(LOG_TAG, "Enable temperature sensor");
+    float tsens_value = 0.0;
+    
+#if CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C6
     temperature_sensor_handle_t temp_handle = NULL;
     temperature_sensor_config_t temp_sensor_config = TEMPERATURE_SENSOR_CONFIG_DEFAULT(20, 100);
     ESP_ERROR_CHECK(temperature_sensor_install(&temp_sensor_config, &temp_handle));
-    ESP_LOGI(LOG_TAG, "Enable temperature sensor");
     ESP_ERROR_CHECK(temperature_sensor_enable(temp_handle));
-    float tsens_value = 0.0;
+#endif
+
     uint8_t log_delay_counter = 0;
     while(1)
     {
+#if CONFIG_IDF_TARGET_ESP32
+        // temprature_sens_read returns raw value, formula: (raw - 32) / 1.8
+        uint8_t raw = temprature_sens_read();
+        tsens_value = (float)(raw - 32) / 1.8f;
+#elif CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C6
         ESP_ERROR_CHECK(temperature_sensor_get_celsius(temp_handle, &tsens_value));
+#endif
+
         ESP_ERROR_CHECK(esp_event_post(SB_STATE_CHANGE_EVENTS, SB_TEMPERATURE_MEASURED, &tsens_value, sizeof(tsens_value), portMAX_DELAY));
         if (log_delay_counter % 6 == 0) {
             ESP_LOGI(LOG_TAG, "Temperature value %.02f C", tsens_value);
@@ -106,6 +148,26 @@ static void rssi_measurement_task(void *param)
     }
 }
 
+#ifdef USE_LED_STRIP
+static void configure_led_strip(void)
+{
+    /* LED strip initialization */
+    led_strip_config_t strip_config = {
+        .strip_gpio_num = LED_PIN,
+        .max_leds = 1, // at least one LED on board
+    };
+    led_strip_rmt_config_t rmt_config = {
+        .clk_src = RMT_CLK_SRC_DEFAULT,
+        .resolution_hz = 10 * 1000 * 1000, // 10MHz
+        .flags = {
+            .with_dma = false,
+        }
+    };
+    ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip));
+    led_strip_clear(led_strip);
+}
+#endif
+
 static esp_err_t configure_gpio(void)
 {
     gpio_config_t led_io_conf = {};
@@ -116,6 +178,7 @@ static esp_err_t configure_gpio(void)
     led_io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
 
     ESP_ERROR_CHECK(gpio_config(&led_io_conf));
+    sb_led_set_level(0); // Initialize to OFF
     return ESP_OK;
 }
 
@@ -132,7 +195,11 @@ extern "C" void app_main()
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
+#ifdef USE_LED_STRIP
+    configure_led_strip();
+#else
     ESP_ERROR_CHECK(configure_gpio());
+#endif
 
     esp_sntp_config_t sntp_config = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
     ESP_ERROR_CHECK(esp_netif_sntp_init(&sntp_config));
@@ -144,7 +211,7 @@ extern "C" void app_main()
     ESP_ERROR_CHECK(mdns_service_add(NULL, "_http", "_tcp", 80, NULL, 0));
     ESP_ERROR_CHECK(mdns_service_instance_name_set("_http", "_tcp", PROJECT_NAME " " PROJECT_VER " Web Server"));
 
-    gpio_set_level(LED_PIN, 1);
+    sb_led_set_level(1);
 
     xTaskCreate(power_on_blink_task, "power_on_blink", 4096, NULL, 3, NULL);
 

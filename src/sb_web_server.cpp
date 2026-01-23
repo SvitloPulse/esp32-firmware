@@ -20,7 +20,8 @@ static sb_server_state_t state = {
     .last_ping_us = 0,
     .temperature = 0,
     .rssi = 0,
-    .pings_failed = 0};
+    .pings_failed = 0,
+    .local_ping_ok = -1};
 
 char response_buffer[1024];
 
@@ -71,9 +72,9 @@ static esp_err_t get_state_handler(httpd_req_t *req)
     esp_chip_info_t chip_info;
     esp_chip_info(&chip_info);
     snprintf(response_buffer, sizeof(response_buffer),
-             "{\"status\":\"%s\",\"ssid\":\"%s\",\"last_ping_us\":%" PRId64 ",\"uptime_us\":%" PRId64 ",\"temperature\":%lu,\"version\":\"" PROJECT_VER "\",\"rssi\":%d,\"chip_model\":\"%s\"}",
+             "{\"status\":\"%s\",\"ssid\":\"%s\",\"last_ping_us\":%" PRId64 ",\"uptime_us\":%" PRId64 ",\"temperature\":%lu,\"version\":\"" PROJECT_VER "\",\"rssi\":%d,\"chip_model\":\"%s\",\"local_ping\":%d}",
              state.status, state.ssid, state.last_ping_us, esp_timer_get_time(),
-             state.temperature, state.rssi, get_chip_model(chip_info.model));
+             state.temperature, state.rssi, get_chip_model(chip_info.model), (int)state.local_ping_ok);
     httpd_resp_set_type(req, "application/json");
     httpd_resp_send(req, (const char *)response_buffer, strlen(response_buffer));
     return ESP_OK;
@@ -115,6 +116,9 @@ static void on_sb_state_change(void *handler_arg, esp_event_base_t base, int32_t
         break;
     case SB_RSSI_MEASURED:
         state.rssi = *(int8_t *)event_data;
+        break;
+    case SB_LOCAL_PING_RESULT:
+        state.local_ping_ok = *(bool *)event_data ? 1 : 0;
         break;
     case SB_PING_SENT:
     {

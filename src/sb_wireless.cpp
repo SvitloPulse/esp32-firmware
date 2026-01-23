@@ -174,9 +174,9 @@ static void _blinker_task(void *param)
     const sb_wireless_config_t *config = (sb_wireless_config_t *)param;
     for (;;)
     {
-        gpio_set_level(config->led_gpio, 0);
+        sb_led_set_level(0);
         vTaskDelay(config->config_blink_interval_ms / portTICK_PERIOD_MS);
-        gpio_set_level(config->led_gpio, 1);
+        sb_led_set_level(1);
         vTaskDelay(config->config_blink_interval_ms / portTICK_PERIOD_MS);
     }
 }
@@ -229,7 +229,7 @@ static void _smart_config_task(void *param)
             s_smart_config_timeout_timer = NULL;
             vTaskDelete(blinker_task_handle);
             blinker_task_handle = NULL;
-            gpio_set_level(config->led_gpio, 1);
+            sb_led_set_level(1);
             break;
         }
     }
