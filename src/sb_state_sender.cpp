@@ -24,29 +24,30 @@ esp_err_t sb_sender_init(void) {
 }
 
 esp_err_t sb_sender_send_ping(void) {
-#ifdef SB_PING_TARGET
-    bool ping_ok = sb_pinger_check(SB_PING_TARGET);
-    ESP_ERROR_CHECK(esp_event_post(SB_STATE_CHANGE_EVENTS, SB_LOCAL_PING_RESULT, &ping_ok, sizeof(ping_ok), portMAX_DELAY));
+    
+    if (g_sb_config.icmp_pinger_enable) {
+        bool ping_ok = sb_pinger_check(g_sb_config.icmp_pinger_target);
+        ESP_ERROR_CHECK(esp_event_post(SB_STATE_CHANGE_EVENTS, SB_LOCAL_PING_RESULT, &ping_ok, sizeof(ping_ok), portMAX_DELAY));
 
-    if (!ping_ok) {
-      ESP_LOGE(TAG, "Skipping Svitlobot request due to ping failure.");
+        if (!ping_ok) {
+        ESP_LOGE(TAG, "Skipping Svitlobot request due to ping failure.");
 
-      return ESP_FAIL;
+        return ESP_FAIL;
+        }
     }
-#endif
 
 #ifndef SB_SVITLOBOT_KEY
     ESP_ERROR_CHECK(sb_config_get(sb_config::KEY, key, &key_size));
 #endif
     esp_http_client_config_t config = {
-        .url = SB_SVITLOBOT_API,
+        .url = g_sb_config.sb_api_url,
         .user_agent = PROJECT_NAME "/" PROJECT_VER,
         .method = HTTP_METHOD_GET,
         .timeout_ms = 10000,
         .crt_bundle_attach = esp_crt_bundle_attach,
     };
 
-    snprintf(buffer, sizeof(buffer), SB_SVITLOBOT_API "%s", key);
+    snprintf(buffer, sizeof(buffer), "%s%s", g_sb_config.sb_api_url, key);
     config.url = buffer;
     esp_http_client_handle_t client = esp_http_client_init(&config);
     esp_http_client_set_header(client, "Content-Type", "application/json");

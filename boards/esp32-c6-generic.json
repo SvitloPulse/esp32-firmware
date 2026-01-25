@@ -1,0 +1,67 @@
+{
+  "build": {
+    "arduino":{
+      "ldscript": "esp32c6_out.ld"
+    },
+    "core": "esp32",
+    "f_cpu": "160000000L",
+    "f_flash": "80000000L",
+    "flash_mode": "qio",
+    "extra_flags": "-DARDUINO_ESP32C6_DEV",
+    "mcu": "esp32c6",
+    "variant": "esp32c6"
+  },
+  "connectivity": [
+    "wifi",
+    "bluetooth"
+  ],
+  "debug": {
+    "openocd_target": "esp32c6.cfg"
+  },
+  "frameworks": [
+    "arduino",
+    "espidf"
+  ],
+  "name": "ESP32-C6 Generic",
+  "upload": {
+    "flash_size": "4MB",
+    "maximum_ram_size": 524288,
+    "maximum_size": 4194304,
+    "require_upload_port": true,
+    "speed": 460800
+  },
+  "url": "https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32c6/esp32-c6-devkitm-1/index.html",
+  "vendor": "Open Source Hardware",
+  "meta": {
+    "variants": {
+      "esp32-c6-supermini": {
+        "boardId": "esp32-c6-supermini",
+        "boardName": "ESP32-C6 Super Mini",
+        "hwConfig": {
+          "led_pin": 8,
+          "led_act_low": 0,
+          "led_str_en": 1
+        },
+        "userConfig": {
+          "icmp_en": false,
+          "icmp_tgt": "192.168.0.1",
+          "sb_url": "https://api.svitlobot.in.ua/channelPing?channel_key="
+        }
+      },
+      "esp32-c6-zero": {
+        "boardId": "esp32-c6-zero",
+        "boardName": "ESP32-C6 Zero",
+        "hwConfig": {
+          "led_pin": 8,
+          "led_act_low": 0,
+          "led_str_en": 1
+        },
+        "userConfig": {
+          "icmp_en": false,
+          "icmp_tgt": "192.168.0.1",
+          "sb_url": "https://api.svitlobot.in.ua/channelPing?channel_key="
+        }
+      }
+    }
+  }
+}

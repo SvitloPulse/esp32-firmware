@@ -1,3 +1,6 @@
+from importlib.resources import files
+
+
 Import("env", "projenv")
 
 SMARTCONFIG_KEY_LEN=16
@@ -15,7 +18,7 @@ try:
     print("Current CLI targets", COMMAND_LINE_TARGETS)
     print("Current Build targets", BUILD_TARGETS)
 
-    svitlobot_api = os.environ.get('SB_SVITLOBOT_API')
+    svitlobot_api = os.environ.get('SB_DEFAULT_SVITLOBOT_API_URL')
     svitlobot_key = os.environ.get('SB_SVITLOBOT_KEY')
     smartconfig_key = os.environ.get('SB_SMARTCONFIG_KEY')
     wifi_ssid = os.environ.get('SB_WIFI_SSID')
@@ -27,7 +30,7 @@ try:
     with open('src/config.hpp', 'w') as f:
         f.write('#pragma once\n')
         f.write('\n')
-        f.write(f'#define SB_SVITLOBOT_API "{svitlobot_api}"\n') if svitlobot_api else None
+        f.write(f'#define SB_DEFAULT_SVITLOBOT_API_URL "{svitlobot_api}"\n') if svitlobot_api else None
         f.write(f'#define SB_SVITLOBOT_KEY "{svitlobot_key}"\n') if svitlobot_key else None
         f.write(f'#define SB_SMARTCONFIG_KEY "{smartconfig_key}"\n') if smartconfig_key else None
         f.write(f'#define SB_WIFI_SSID "{wifi_ssid}"\n') if wifi_ssid else None
@@ -65,9 +68,17 @@ try:
             data = f.read()
             sha256 = hashlib.sha256(data).hexdigest()
 
-        manifest = dict(boardId=pioenv, boardName=board.get("name", pioenv), chipId=mcu, files=[
-            dict(name=env.subst(f"{pioenv}-$PROGNAME-merged.bin"), offset=bootloader_def[0], sha256=sha256),
-        ])
+        board_variants = board.get("meta.variants", {})
+        if not board_variants:
+            raise RuntimeError('Board variants not defined in board json file')
+        manifest = []
+        for board_id, board_variant_data in board_variants.items():
+            board_def = dict(boardId=board_id, boardName=board_variant_data.get("boardName", board_id), 
+                             chipId=mcu, flashSize=board_variant_data.get("flashSize") or board.get("upload.flash_size"), 
+                             files=[
+                                dict(name=env.subst(f"{pioenv}-$PROGNAME-merged.bin"), offset=bootloader_def[0], sha256=sha256),
+                             ], hwConfig=board_variant_data.get("hwConfig", {}), userConfig=board_variant_data.get("userConfig", {}))
+            manifest.append(board_def)
         with open(env.subst(f"$BUILD_DIR/{pioenv}-manifest.json"), 'w') as f:
             json.dump(manifest, f, indent=4)
 

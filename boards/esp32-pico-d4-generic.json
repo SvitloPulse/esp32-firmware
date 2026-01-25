@@ -22,7 +22,7 @@
     "arduino",
     "espidf"
   ],
-  "name": "ESP32-Pico-D4",
+  "name": "ESP32-Pico-D4 Generic",
   "upload": {
     "flash_size": "4MB",
     "maximum_ram_size": 327680,
@@ -31,5 +31,22 @@
     "speed": 460800
   },
   "url": "https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32/esp32-pico-kit-1/index.html",
-  "vendor": "Open Source Hardware"
+  "vendor": "Open Source Hardware",
+  "meta": {
+    "variants": {
+      "esp32-key-v1.0": {
+        "boardId": "esp32-key-v1.0",
+        "boardName": "ESP32 Key V1.0",
+        "hwConfig": {
+          "led_pin": 10,
+          "led_act_low": 1
+        },
+        "userConfig": {
+          "icmp_en": false,
+          "icmp_tgt": "192.168.0.1",
+          "sb_url": "https://api.svitlobot.in.ua/channelPing?channel_key="
+        }
+      }
+    }
+  }
 }

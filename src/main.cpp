@@ -22,11 +22,9 @@
 #include "sb_state_sender.hpp"
 #include "sb_web_server.hpp"
 
-#ifdef USE_LED_STRIP
 #include "led_strip.h"
 
 static led_strip_handle_t led_strip;
-#endif
 
 static const char *LOG_TAG = "main";
 
@@ -38,20 +36,16 @@ uint8_t temprature_sens_read();
 
 void sb_led_set_level(uint32_t level)
 {
-#ifdef USE_LED_STRIP
-    if (level == 1) {
-        led_strip_set_pixel(led_strip, 0, 0, 0, 16); // Blue to match C3 Supermini
+    if (g_sb_config.use_led_strip) {
+        if (level == 1) {
+            led_strip_set_pixel(led_strip, 0, 0, 0, 16); // Blue to match C3 Supermini
+        } else {
+            led_strip_clear(led_strip);
+        }
+        led_strip_refresh(led_strip);
     } else {
-        led_strip_clear(led_strip);
+        gpio_set_level((gpio_num_t)g_sb_config.led_pin, level > 0 ? !g_sb_config.led_active_low : g_sb_config.led_active_low);
     }
-    led_strip_refresh(led_strip);
-#else
-    #ifdef LED_ACTIVE_LOW
-        gpio_set_level(LED_PIN, level > 0 ? 0 : 1);
-    #else
-        gpio_set_level(LED_PIN, level > 0 ? 1 : 0);
-    #endif
-#endif
 }
 
 static const uint64_t WIFI_CONNECTION_TIMEOUT_US = 10000000;  // 10 seconds
@@ -92,7 +86,7 @@ static void power_on_blink_task(void *param)
         sb_led_set_level(0);
         vTaskDelay(POWER_ON_BLINK_INTERVAL_MS / portTICK_PERIOD_MS);
     }
-    sb_led_set_level(1);
+    sb_led_set_level(0);
     vTaskDelete(NULL);
 }
 
@@ -141,6 +135,7 @@ static void rssi_measurement_task(void *param)
         {
             ESP_LOGI(LOG_TAG, "SSID: %s, RSSI: %d", ap_info.ssid, ap_info.rssi);
             log_delay_counter = 0;
+            sb_config_print_all();
         }
         log_delay_counter++;
         ESP_ERROR_CHECK(esp_event_post(SB_STATE_CHANGE_EVENTS, SB_RSSI_MEASURED, &ap_info.rssi, sizeof(ap_info.rssi), portMAX_DELAY));
@@ -148,12 +143,11 @@ static void rssi_measurement_task(void *param)
     }
 }
 
-#ifdef USE_LED_STRIP
 static void configure_led_strip(void)
 {
     /* LED strip initialization */
     led_strip_config_t strip_config = {
-        .strip_gpio_num = LED_PIN,
+        .strip_gpio_num = g_sb_config.led_pin,
         .max_leds = 1, // at least one LED on board
     };
     led_strip_rmt_config_t rmt_config = {
@@ -166,14 +160,13 @@ static void configure_led_strip(void)
     ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip));
     led_strip_clear(led_strip);
 }
-#endif
 
 static esp_err_t configure_gpio(void)
 {
     gpio_config_t led_io_conf = {};
     led_io_conf.intr_type = GPIO_INTR_DISABLE;
     led_io_conf.mode = GPIO_MODE_OUTPUT;
-    led_io_conf.pin_bit_mask = (1ULL << LED_PIN);
+    led_io_conf.pin_bit_mask = (1ULL << g_sb_config.led_pin);
     led_io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
     led_io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
 
@@ -187,7 +180,7 @@ static sb_wireless_config_t wireless_config = {
     .wifi_connection_timeout_us = WIFI_CONNECTION_TIMEOUT_US,
     .smart_config_timeout_us = SMART_CONFIG_TIMEOUT_US,
     .config_blink_interval_ms = CONFIG_BLINK_INTERVAL_MS,
-    .led_gpio = LED_PIN,
+    .led_gpio = (gpio_num_t) g_sb_config.led_pin,
 };
 
 extern "C" void app_main()
@@ -195,11 +188,14 @@ extern "C" void app_main()
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
-#ifdef USE_LED_STRIP
-    configure_led_strip();
-#else
-    ESP_ERROR_CHECK(configure_gpio());
-#endif
+
+    sb_config_init();
+
+    if (g_sb_config.use_led_strip) {
+        configure_led_strip();
+    } else {
+        ESP_ERROR_CHECK(configure_gpio());
+    }
 
     esp_sntp_config_t sntp_config = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
     ESP_ERROR_CHECK(esp_netif_sntp_init(&sntp_config));
@@ -213,7 +209,6 @@ extern "C" void app_main()
 
     xTaskCreate(power_on_blink_task, "power_on_blink", 4096, NULL, 3, NULL);
 
-    sb_config_init();
     sb_web_server_init();
 
 #ifdef SB_SMARTCONFIG_KEY
@@ -222,6 +217,7 @@ extern "C" void app_main()
     memcpy(wireless_config.smart_config_key, smart_config_key, 16);
 #endif
 
+    wireless_config.led_gpio = (gpio_num_t)g_sb_config.led_pin;
     sb_wireless_init(&wireless_config);
     sb_sender_init();
 
