@@ -9,7 +9,7 @@ The device sends a ping to Svitlobot Service every minute. When mains goes off, 
 ## How to use it?
 
 1. Buy a ESP32-C3 Super Mini board.
-1. Flash it with released firmware (see Releases page, coming soon) either with Svitlo Pulse Web Installer (coming soon), [ESPHome Web Installer](https://web.esphome.io/) or other preferred method.
+1. Flash it with released firmware (see Releases page, coming soon) either with [Svitlo Pulse Web Installer](https://svitlopulse.github.io/webinstaller/), [ESPHome Web Installer](https://web.esphome.io/) or other preferred method.
     - Alternatively, you can build and flash it yourself, see below.
 1. Configure it before flashing in Svitlo Pulse Web Installer (coming soon) or at runtime using Android app.
 1. Connect it to 5V USB adapter, typically used for smartphone charging, and that's it!
